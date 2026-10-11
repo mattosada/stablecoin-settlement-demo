@@ -110,4 +110,4 @@ payments.json              Idempotency ledger (gitignored)
 4. Save provider recovery files immediately. There is no "forgot my password" in shared custody.
 5. Know your rate limits before consuming test resources.
 
-Detailed write-up: [link to article]
+Detailed write-up: https://www.linkedin.com/pulse/im-payments-product-manager-i-built-usdc-checkout-testnet-osada-cscsf/
