@@ -1,0 +1,4 @@
+node_modules/
+.env
+entity-secret.key
+payments.json

@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Card vs Stablecoin</title>
+  <link rel="stylesheet" href="/style.css">
+  <style>
+    table { table-layout: fixed; }
+    table th:first-child, table td:first-child { width: 18%; color: #e8e8e8; font-weight: 700; font-size: 16px; }
+    table th:nth-child(2), table td:nth-child(2) { width: 41%; }
+    table th:nth-child(3), table td:nth-child(3) { width: 41%; }
+    table th { font-size: 18px; color: #e8e8e8; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <nav>
+    <a href="/checkout">Checkout</a>
+    <a href="/customer">Customer</a>
+    <a href="/merchant">Merchant</a>
+    <a href="/compare"><strong>Compare</strong></a>
+  </nav>
+
+  <h1>Card Rails vs Stablecoin</h1>
+
+  <table>
+    <thead>
+      <tr>
+        <th></th>
+        <th>Card Rails</th>
+        <th>Stablecoin (USDC)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>Model</td><td>Pull: merchant requests the debit</td><td>Push: customer initiates the transfer</td></tr>
+      <tr><td>Flow</td><td>Auth → Capture (2 steps)</td><td>Single transaction (1 step)</td></tr>
+      <tr><td>Settlement</td><td>T+2 (sometimes T+1)</td><td>~15 seconds</td></tr>
+      <tr><td>Availability</td><td>Banking business days</td><td>24/7/365</td></tr>
+      <tr><td>Finality</td><td>Provisional for 120 days (chargeback window)</td><td>Irreversible once confirmed</td></tr>
+      <tr><td>Chargebacks</td><td>Yes: cardholder can dispute</td><td>No dispute mechanism</td></tr>
+      <tr><td>Refunds</td><td>Standard flow, same rail in reverse</td><td>New transfer initiated by merchant</td></tr>
+      <tr><td>Custody</td><td>Bank (customer funds) / Acquirer (merchant funds)</td><td>Depends on model: self-custody, custodial, or shared (MPC). This demo uses dev-controlled shared custody via Circle.</td></tr>
+      <tr><td>Merchant fees</td><td>Interchange 1.5–3%</td><td>None (gas paid by sender)</td></tr>
+      <tr><td>Sender fees</td><td>None for the cardholder</td><td>Gas (~$0.01–0.50 depending on network)</td></tr>
+      <tr><td>Intermediaries</td><td>Issuer → Network → Acquirer → Processor</td><td>Blockchain (validators only)</td></tr>
+      <tr><td>Cross-border</td><td>FX surcharge 1–3%</td><td>Same cost, no borders</td></tr>
+      <tr><td>Reconciliation</td><td>Statements, batches, clearing files</td><td>Public ledger in real time (block explorer)</td></tr>
+    </tbody>
+  </table>
+</body>
+</html>

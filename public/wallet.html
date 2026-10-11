@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title id="page-title">Wallet</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <nav>
+    <a href="/checkout">Checkout</a>
+    <a id="nav-customer" href="/customer">Customer</a>
+    <a id="nav-merchant" href="/merchant">Merchant</a>
+    <a href="/compare">Compare</a>
+  </nav>
+
+  <h1 id="title"></h1>
+
+  <div class="balance" id="balance">—</div>
+  <p class="muted" id="eth-balance"></p>
+
+  <h2>Transactions</h2>
+  <table>
+    <thead><tr><th>Date</th><th>Amount</th><th></th><th>Fee</th><th></th><th>Explorer</th></tr></thead>
+    <tbody id="txs"></tbody>
+  </table>
+
+  <script>
+    // Determine which wallet from the URL
+    const role = location.pathname.replace('/', '');
+    document.getElementById('title').textContent = role === 'customer' ? 'Customer' : 'Merchant';
+    document.getElementById('page-title').textContent = role === 'customer' ? 'Customer' : 'Merchant';
+    document.querySelector(`#nav-${role}`).innerHTML = `<strong>${role === 'customer' ? 'Customer' : 'Merchant'}</strong>`;
+
+    async function load() {
+      const res = await fetch(`/api/wallet/${role}`);
+      const data = await res.json();
+
+      // Balances
+      const usdc = data.balances.find(b => b.symbol === 'USDC');
+      const eth = data.balances.find(b => b.symbol === 'ETH-SEPOLIA');
+      document.getElementById('balance').innerHTML = (usdc ? usdc.amount : '0') + ' <span>USDC</span>';
+      document.getElementById('eth-balance').textContent = (eth ? parseFloat(eth.amount).toFixed(6) : '0') + ' ETH';
+
+      // Transactions (built with DOM API to avoid XSS)
+      const tbody = document.getElementById('txs');
+      tbody.innerHTML = '';
+
+      function td(text, className) {
+        const el = document.createElement('td');
+        el.textContent = text;
+        if (className) el.className = className;
+        return el;
+      }
+
+      for (const tx of data.transactions) {
+        const tr = document.createElement('tr');
+        const date = new Date(tx.createDate).toLocaleDateString('en', { timeZone: 'Europe/Paris', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+        const isInbound = tx.transactionType === 'INBOUND';
+        const sign = isInbound ? '+' : '-';
+
+        // Only show fees paid by this wallet (outbound transactions)
+        const showFee = !isInbound && tx.networkFee;
+
+        tr.appendChild(td(date));
+        tr.appendChild(td(sign + (tx.amounts?.[0] || '?')));
+        tr.appendChild(td(tx.tokenSymbol || '', 'muted'));
+        tr.appendChild(td(showFee ? parseFloat(tx.networkFee).toFixed(6) : '—'));
+        tr.appendChild(td(showFee ? 'ETH' : '', 'muted'));
+
+        const linkTd = document.createElement('td');
+        if (tx.txHash) {
+          const a = document.createElement('a');
+          a.href = 'https://sepolia.etherscan.io/tx/' + tx.txHash;
+          a.target = '_blank';
+          a.textContent = tx.txHash.slice(0, 10) + '…';
+          linkTd.appendChild(a);
+        } else {
+          linkTd.textContent = '—';
+        }
+        tr.appendChild(linkTd);
+        tbody.appendChild(tr);
+      }
+
+      if (!data.transactions.length) {
+        const tr = document.createElement('tr');
+        const emptyTd = td('No transactions yet', 'muted');
+        emptyTd.colSpan = 6;
+        tr.appendChild(emptyTd);
+        tbody.appendChild(tr);
+      }
+    }
+
+    load();
+  </script>
+</body>
+</html>

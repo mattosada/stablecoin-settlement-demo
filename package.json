@@ -1,0 +1,14 @@
+{
+  "name": "stablecoin-settlement-demo",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "setup": "node scripts/generate-entity-secret.js"
+  },
+  "dependencies": {
+    "@circle-fin/developer-controlled-wallets": "^6.0.0",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.0"
+  }
+}

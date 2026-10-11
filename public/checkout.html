@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Checkout</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <nav>
+    <a href="/checkout"><strong>Checkout</strong></a>
+    <a href="/customer">Customer</a>
+    <a href="/merchant">Merchant</a>
+    <a href="/compare">Compare</a>
+  </nav>
+
+  <h1>Payment</h1>
+
+  <div id="pay-view">
+    <div class="amount">
+      <input id="amount" type="number" min="0.01" step="0.01" value="1"
+        style="width:3ch; background:none; border:none; border-bottom:2px solid #888; color:#e8e8e8; font-size:inherit; font-weight:inherit; font-family:inherit; text-align:right; outline:none;"
+        oninput="this.style.width = Math.max(3, this.value.length+1) + 'ch'">
+      <span>USDC</span>
+    </div>
+    <p class="muted">To merchant wallet</p>
+    <button id="pay-btn" onclick="pay()">Pay now</button>
+  </div>
+
+  <div id="result" class="result" hidden>
+    <p><span id="status" class="status"></span></p>
+    <p id="gas" class="muted"></p>
+    <p id="explorer"></p>
+  </div>
+
+  <script>
+    async function pay() {
+      const btn = document.getElementById('pay-btn');
+      btn.disabled = true;
+      btn.textContent = 'Processing…';
+
+      const amount = document.getElementById('amount').value;
+      const res = await fetch('/api/pay', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount }),
+      });
+      const data = await res.json();
+
+      document.getElementById('pay-view').hidden = true;
+      document.getElementById('result').hidden = false;
+
+      const status = document.getElementById('status');
+      if (data.state === 'CONFIRMED' || data.state === 'COMPLETE') {
+        status.textContent = 'Confirmed';
+        status.className = 'status confirmed';
+        if (data.networkFee) {
+          document.getElementById('gas').textContent = 'Gas fee: ' + parseFloat(data.networkFee).toFixed(6) + ' ETH';
+        }
+        const a = document.createElement('a');
+        a.href = data.explorerUrl;
+        a.target = '_blank';
+        a.textContent = 'View on block explorer →';
+        document.getElementById('explorer').appendChild(a);
+      } else {
+        status.textContent = 'Failed';
+        status.className = 'status failed';
+      }
+    }
+  </script>
+</body>
+</html>
