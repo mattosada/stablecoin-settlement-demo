@@ -2,12 +2,7 @@
 // Usage: `node scripts/check-balances.js`
 
 import "dotenv/config";
-import { initiateDeveloperControlledWalletsClient } from "@circle-fin/developer-controlled-wallets";
-
-const client = initiateDeveloperControlledWalletsClient({
-  apiKey: process.env.CIRCLE_API_KEY,
-  entitySecret: process.env.CIRCLE_ENTITY_SECRET,
-});
+import { client } from "../lib/circle.js";
 
 async function showBalances(walletId, label) {
   const { data } = await client.getWalletTokenBalance({ id: walletId });

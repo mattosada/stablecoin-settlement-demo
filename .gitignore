@@ -1,4 +1,6 @@
 node_modules/
 .env
 entity-secret.key
+*.dat
 payments.json
+.DS_Store

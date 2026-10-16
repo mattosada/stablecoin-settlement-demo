@@ -11,6 +11,8 @@
     <a href="/checkout">Checkout</a>
     <a id="nav-customer" href="/customer">Customer</a>
     <a id="nav-merchant" href="/merchant">Merchant</a>
+    <a href="/buy">Buy</a>
+    <a href="/sell">Sell</a>
     <a href="/compare">Compare</a>
   </nav>
 
@@ -27,10 +29,13 @@
 
   <script>
     // Determine which wallet from the URL
-    const role = location.pathname.replace('/', '');
-    document.getElementById('title').textContent = role === 'customer' ? 'Customer' : 'Merchant';
-    document.getElementById('page-title').textContent = role === 'customer' ? 'Customer' : 'Merchant';
-    document.querySelector(`#nav-${role}`).innerHTML = `<strong>${role === 'customer' ? 'Customer' : 'Merchant'}</strong>`;
+    const role = location.pathname.startsWith('/merchant') ? 'merchant' : 'customer';
+    const label = role === 'customer' ? 'Customer' : 'Merchant';
+    document.getElementById('title').textContent = label;
+    document.getElementById('page-title').textContent = label;
+    const current = document.createElement('strong');
+    current.textContent = label;
+    document.getElementById(`nav-${role}`).replaceChildren(current);
 
     async function load() {
       const res = await fetch(`/api/wallet/${role}`);
@@ -39,12 +44,14 @@
       // Balances
       const usdc = data.balances.find(b => b.symbol === 'USDC');
       const eth = data.balances.find(b => b.symbol === 'ETH-SEPOLIA');
-      document.getElementById('balance').innerHTML = (usdc ? usdc.amount : '0') + ' <span>USDC</span>';
+      const unit = document.createElement('span');
+      unit.textContent = 'USDC';
+      document.getElementById('balance').replaceChildren((usdc ? usdc.amount : '0') + ' ', unit);
       document.getElementById('eth-balance').textContent = (eth ? parseFloat(eth.amount).toFixed(6) : '0') + ' ETH';
 
       // Transactions (built with DOM API to avoid XSS)
       const tbody = document.getElementById('txs');
-      tbody.innerHTML = '';
+      tbody.replaceChildren();
 
       function td(text, className) {
         const el = document.createElement('td');

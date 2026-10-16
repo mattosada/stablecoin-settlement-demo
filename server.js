@@ -6,6 +6,9 @@ import express from "express";
 import crypto from "node:crypto";
 import { transferUSDC, client } from "./lib/circle.js";
 
+const moonpayHmac = (message) =>
+  crypto.createHmac("sha256", process.env.MOONPAY_SK_TEST).update(message).digest("base64");
+
 const app = express();
 app.use(express.static("public"));
 app.use(express.json());
@@ -15,8 +18,41 @@ app.get("/checkout", (_, res) => res.sendFile("checkout.html", { root: "public" 
 app.get("/customer", (_, res) => res.sendFile("wallet.html", { root: "public" }));
 app.get("/merchant", (_, res) => res.sendFile("wallet.html", { root: "public" }));
 app.get("/compare", (_, res) => res.sendFile("compare.html", { root: "public" }));
+app.get("/buy", (_, res) => res.sendFile("buy.html", { root: "public" }));
+app.get("/sell", (_, res) => res.sendFile("sell.html", { root: "public" }));
 
-// API: execute payment (idempotent per browser session)
+// API: customer wallet address (for MoonPay widget)
+app.get("/api/wallet/customer/address", async (_, res) => {
+  try {
+    const { data: wallet } = await client.getWallet({ id: process.env.CUSTOMER_WALLET_ID });
+    res.json({ address: wallet.wallet.address });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// API: MoonPay publishable key (safe to expose)
+app.get("/api/moonpay/key", (_, res) => res.json({ apiKey: process.env.MOONPAY_PK_TEST }));
+
+// API: MoonPay IP binding. Signed widget URLs must carry an HMAC of the customer's public IP.
+app.get("/api/moonpay/ip-hash", (req, res) => {
+  let ip = req.ip.replace(/^::ffff:/, "");
+  // Locally req.ip is loopback, so use the public IP the browser got from MoonPay.
+  if (ip === "::1" || ip === "127.0.0.1") ip = req.query.ip;
+  if (!ip) return res.status(400).json({ error: "Missing ip" });
+  res.json({ allowedIpAddress: moonpayHmac(ip) });
+});
+
+// API: MoonPay URL signing (HMAC-SHA256 of the query string, secret key never leaves the server)
+app.post("/api/moonpay/sign", (req, res) => {
+  const url = new URL(req.body.urlForSignature ?? "about:blank");
+  if (!url.hostname.endsWith(".moonpay.com") || url.searchParams.get("apiKey") !== process.env.MOONPAY_PK_TEST) {
+    return res.status(400).json({ error: "Not a MoonPay widget URL for this account" });
+  }
+  res.json({ signature: moonpayHmac(url.search) });
+});
+
+// API: customer pays merchant in USDC
 app.post("/api/pay", async (req, res) => {
   try {
     const amount = parseFloat(req.body.amount);

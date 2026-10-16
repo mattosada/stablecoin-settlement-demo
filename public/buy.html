@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Buy Crypto</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <nav>
+    <a href="/checkout">Checkout</a>
+    <a href="/customer">Customer</a>
+    <a href="/merchant">Merchant</a>
+    <a href="/buy"><strong>Buy</strong></a>
+    <a href="/sell">Sell</a>
+    <a href="/compare">Compare</a>
+  </nav>
+
+  <h1>Buy Crypto</h1>
+  <p class="muted">On-ramp: card payment → crypto via MoonPay (sandbox). Buys Sepolia ETH: the sandbox ERC-20 token fails delivery to new wallets (gas limit too low).</p>
+
+  <div id="widget-container"></div>
+
+  <script src="https://static.moonpay.com/web-sdk/v1/moonpay-web-sdk.min.js"></script>
+  <script src="/moonpay.js"></script>
+  <script>
+    fetch('/api/wallet/customer/address')
+      .then((r) => r.json())
+      .then(({ address }) => openMoonPay('buy', {
+        currencyCode: 'eth',
+        baseCurrencyCode: 'usd',
+        walletAddress: address,
+      }));
+  </script>
+</body>
+</html>

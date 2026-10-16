@@ -2,12 +2,7 @@
 // Run once: `node scripts/create-wallets.js`
 
 import "dotenv/config";
-import { initiateDeveloperControlledWalletsClient } from "@circle-fin/developer-controlled-wallets";
-
-const client = initiateDeveloperControlledWalletsClient({
-  apiKey: process.env.CIRCLE_API_KEY,
-  entitySecret: process.env.CIRCLE_ENTITY_SECRET,
-});
+import { client } from "../lib/circle.js";
 
 // 1. Create a wallet set (logical group)
 const { data: walletSet } = await client.createWalletSet({

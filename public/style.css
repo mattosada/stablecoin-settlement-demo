@@ -81,6 +81,16 @@ button:disabled { opacity: 0.3; cursor: not-allowed; }
   font-weight: 700;
 }
 
+#widget-container {
+  width: 100%;
+  max-width: 420px;
+  height: 640px;
+  margin-top: 32px;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+#widget-container iframe { border: none; width: 100%; height: 100%; }
+
 .status.confirmed { color: #4a2; }
-.status.pending { color: #ca2; }
 .status.failed { color: #c44; }

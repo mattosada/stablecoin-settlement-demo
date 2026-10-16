@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sell Crypto</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <nav>
+    <a href="/checkout">Checkout</a>
+    <a href="/customer">Customer</a>
+    <a href="/merchant">Merchant</a>
+    <a href="/buy">Buy</a>
+    <a href="/sell"><strong>Sell</strong></a>
+    <a href="/compare">Compare</a>
+  </nav>
+
+  <h1>Sell Crypto</h1>
+  <p class="muted">Off-ramp: crypto → fiat via MoonPay (sandbox)</p>
+
+  <div id="widget-container"></div>
+
+  <script src="https://static.moonpay.com/web-sdk/v1/moonpay-web-sdk.min.js"></script>
+  <script src="/moonpay.js"></script>
+  <script>
+    openMoonPay('sell', {
+      baseCurrencyCode: 'usdc',
+      quoteCurrencyCode: 'usd',
+    });
+  </script>
+</body>
+</html>
