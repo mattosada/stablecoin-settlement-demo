@@ -64,7 +64,7 @@
     <tbody>
       <tr><td>Getting money in</td><td>Card purchase: auth + capture</td><td>A card-funded on-ramp is a card purchase, with the provider as merchant. Same auth, 3DS, issuer declines</td></tr>
       <tr><td>Getting money out</td><td>Refund to the original card. Merchant funds settled by the acquirer to a bank account</td><td>Payout is a push to card (Visa Direct, itself card rails) or a bank transfer</td></tr>
-      <tr><td>Risk signals</td><td>BIN country, IP, 3DS</td><td>Same signals. The transaction's country came from the IP, not the KYC address</td></tr>
+      <tr><td>Risk signals</td><td>BIN country, IP, 3DS</td><td>Same signals. The transaction's country followed the customer's KYC country, not the IP (a UK VPN didn't change it)</td></tr>
       <tr><td>Cross-border</td><td>FX surcharge, scheme rules</td><td>A EUR payout to a US card was refused as cross-border</td></tr>
       <tr><td>Fees</td><td>Mostly a % of the amount (MDR), sometimes plus a fixed fee, paid by the merchant</td><td>Paid by the customer: a % with a minimum (sell 1%, card buy ~3–3.6%, €3.99 minimum), plus network fees independent of the amount</td></tr>
       <tr><td>Speed</td><td>Auth instant, settlement T+1/T+2</td><td>Transfer in seconds, then minutes for the confirmations the provider requires (12 for ETH). Fiat payout: minutes (card) to days (bank transfer)</td></tr>

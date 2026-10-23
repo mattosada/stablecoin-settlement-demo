@@ -146,7 +146,7 @@ payments.json              Idempotency ledger (gitignored)
 
 - **Test cards were always declined** ("Payment authorization declined"), whatever the card, account country, IP country or test identity. Apple Pay in test mode is a mock (OK / Cancel dialog) that skips the card processor, and goes through.
 - **ERC-20 delivery fails to new wallets.** MoonPay caps its token transfers at 100,000 gas; a first receipt costs ~142,000 on Sepolia. The demo buys Sepolia ETH instead (21,000 gas).
-- **The transaction country is the IP country**, not the KYC address. MoonPay also merges Gmail `+` aliases into one customer.
+- **The transaction country follows the customer account (KYC country), not the IP.** On a UK VPN, a Polish account still showed POL; only a new account with a UK address showed GBR. MoonPay also merges Gmail `+` aliases into one customer: two "different" accounts came back with the same customer ID.
 - **Test mode delivers 1/100th** of the quoted amount.
 
 Off-ramp:
