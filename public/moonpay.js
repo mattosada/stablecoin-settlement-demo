@@ -2,7 +2,7 @@
 // Signing happens server-side: the secret key never reaches the browser.
 const getJson = (url, options) => fetch(url, options).then((r) => r.json());
 
-async function openMoonPay(flow, params) {
+async function openMoonPay(flow, params, handlers = {}) {
   const { apiKey } = await getJson('/api/moonpay/key');
 
   // MoonPay checks the IP it sees from this browser, so ask MoonPay for it directly.
@@ -15,6 +15,7 @@ async function openMoonPay(flow, params) {
     variant: 'embedded',
     containerNodeSelector: '#widget-container',
     params: { apiKey, allowedIpAddress, ...params },
+    handlers,
   });
 
   const { signature } = await getJson('/api/moonpay/sign', {

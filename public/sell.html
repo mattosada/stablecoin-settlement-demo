@@ -13,21 +13,39 @@
     <a href="/merchant">Merchant</a>
     <a href="/buy">Buy</a>
     <a href="/sell"><strong>Sell</strong></a>
+    <a href="/offramp">Tracking</a>
     <a href="/compare">Compare</a>
   </nav>
 
   <h1>Sell Crypto</h1>
-  <p class="muted">Off-ramp: crypto → fiat via MoonPay (sandbox)</p>
+  <p class="muted">Off-ramp: crypto → fiat via MoonPay (sandbox). Sells Sepolia ETH from the customer wallet; the server sends the deposit.</p>
 
   <div id="widget-container"></div>
 
   <script src="https://static.moonpay.com/web-sdk/v1/moonpay-web-sdk.min.js"></script>
   <script src="/moonpay.js"></script>
   <script>
-    openMoonPay('sell', {
-      baseCurrencyCode: 'usdc',
-      quoteCurrencyCode: 'usd',
-    });
+    fetch('/api/wallet/customer/address')
+      .then((r) => r.json())
+      .then(({ address }) => openMoonPay('sell', {
+        baseCurrencyCode: 'eth',
+        baseCurrencyAmount: '0.01',
+        // The sandbox payout card is a US Visa: a non-USD payout is rejected as cross-border.
+        quoteCurrencyCode: 'usd',
+        refundWalletAddress: address,
+      }, {
+        // MoonPay waits for the crypto: our server sends it from the Circle wallet.
+        async onInitiateDeposit({ transactionId, depositWalletAddress }) {
+          const res = await fetch('/api/offramp/deposit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ transactionId, depositWalletAddress }),
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error);
+          return { depositId: data.hash };
+        },
+      }));
   </script>
 </body>
 </html>

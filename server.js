@@ -4,10 +4,19 @@
 import "dotenv/config";
 import express from "express";
 import crypto from "node:crypto";
-import { transferUSDC, client } from "./lib/circle.js";
+import { send, transferUSDC, readLedger, client } from "./lib/circle.js";
 
 const moonpayHmac = (message) =>
   crypto.createHmac("sha256", process.env.MOONPAY_SK_TEST).update(message).digest("base64");
+
+async function moonpayApi(path) {
+  const res = await fetch(`https://api.moonpay.com${path}?apiKey=${process.env.MOONPAY_PK_TEST}`, {
+    headers: { Authorization: `Api-Key ${process.env.MOONPAY_SK_TEST}` },
+  });
+  const body = await res.json();
+  if (!res.ok) throw new Error(`MoonPay ${res.status}: ${body.message}`);
+  return body;
+}
 
 const app = express();
 app.use(express.static("public"));
@@ -20,6 +29,7 @@ app.get("/merchant", (_, res) => res.sendFile("wallet.html", { root: "public" })
 app.get("/compare", (_, res) => res.sendFile("compare.html", { root: "public" }));
 app.get("/buy", (_, res) => res.sendFile("buy.html", { root: "public" }));
 app.get("/sell", (_, res) => res.sendFile("sell.html", { root: "public" }));
+app.get("/offramp", (_, res) => res.sendFile("offramp.html", { root: "public" }));
 
 // API: customer wallet address (for MoonPay widget)
 app.get("/api/wallet/customer/address", async (_, res) => {
@@ -50,6 +60,69 @@ app.post("/api/moonpay/sign", (req, res) => {
     return res.status(400).json({ error: "Not a MoonPay widget URL for this account" });
   }
   res.json({ signature: moonpayHmac(url.search) });
+});
+
+// API: off-ramp deposit. Sends the sold ETH from the customer wallet to MoonPay.
+// Amount, status and deposit address come from MoonPay's API; the browser's copy must match.
+app.post("/api/offramp/deposit", async (req, res) => {
+  try {
+    const { transactionId, depositWalletAddress } = req.body;
+    const sale = await moonpayApi(`/v3/sell_transactions/${encodeURIComponent(transactionId)}`);
+    if (sale.status !== "waitingForDeposit" || sale.baseCurrency.code !== "eth") {
+      return res.status(409).json({ error: `Sale not awaiting an ETH deposit (status: ${sale.status})` });
+    }
+
+    // depositWallet is not in MoonPay's documented schema; verified on a sandbox sale (2026-10-16).
+    const moonpayAddress = sale.depositWallet?.walletAddress;
+    if (!moonpayAddress || moonpayAddress.toLowerCase() !== String(depositWalletAddress).toLowerCase()) {
+      return res.status(409).json({ error: "Deposit address does not match MoonPay's records" });
+    }
+
+    const result = await send({
+      from: process.env.CUSTOMER_WALLET_ID,
+      destinationAddress: moonpayAddress,
+      tokenAddress: "",
+      amount: sale.baseCurrencyAmount,
+      idempotencyKey: `offramp-${sale.id}`,
+    });
+    res.json(result);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// API: off-ramp sales from our ledger, with MoonPay's status and our Circle deposit
+app.get("/api/offramp", async (_, res) => {
+  try {
+    const entries = Object.entries(readLedger()).filter(([key]) => key.startsWith("offramp-"));
+    const sales = await Promise.all(entries.map(async ([key, circleTxId]) => {
+      const [sale, { data }] = await Promise.all([
+        moonpayApi(`/v3/sell_transactions/${encodeURIComponent(key.slice("offramp-".length))}`),
+        client.getTransaction({ id: circleTxId }),
+      ]);
+      const deposit = data.transaction;
+      return {
+        id: sale.id,
+        createdAt: sale.createdAt,
+        status: sale.status,
+        failureReason: sale.failureReason,
+        baseAmount: sale.baseCurrencyAmount,
+        baseCode: sale.baseCurrency.code,
+        quoteAmount: sale.quoteCurrencyAmount,
+        quoteCode: sale.quoteCurrency.code,
+        fee: sale.feeAmount,
+        payoutMethod: sale.payoutMethod,
+        depositReceived: Boolean(sale.depositHash),
+        confirmations: sale.confirmations,
+        refundApprovalStatus: sale.refundApprovalStatus,
+        refundHash: sale.refundHash,
+        deposit: { state: deposit.state, hash: deposit.txHash, networkFee: deposit.networkFee },
+      };
+    }));
+    res.json(sales.sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 // API: customer pays merchant in USDC
@@ -109,4 +182,5 @@ app.get("/api/wallet/:role", async (req, res) => {
   }
 });
 
-app.listen(3000, () => console.log("http://localhost:3000/checkout"));
+const port = process.env.PORT || 3000;
+app.listen(port, () => console.log(`http://localhost:${port}/checkout`));

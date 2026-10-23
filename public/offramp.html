@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Off-ramp tracking</title>
+  <link rel="stylesheet" href="/style.css">
+  <style>
+    table { table-layout: fixed; margin-bottom: 16px; }
+    table th:first-child, table td:first-child { width: 26%; }
+    table th:nth-child(2), table td:nth-child(2) { width: 26%; }
+    td .status { padding: 0; margin-right: 10px; }
+    td.muted { font-size: 16px; }
+  </style>
+</head>
+<body>
+  <nav>
+    <a href="/checkout">Checkout</a>
+    <a href="/customer">Customer</a>
+    <a href="/merchant">Merchant</a>
+    <a href="/buy">Buy</a>
+    <a href="/sell">Sell</a>
+    <a href="/offramp"><strong>Tracking</strong></a>
+    <a href="/compare">Compare</a>
+  </nav>
+
+  <h1>Off-ramp tracking</h1>
+  <p class="muted">Each sale from the customer wallet: who does what, and where it stands (MoonPay sandbox).</p>
+
+  <div id="sales"><p class="muted">Loading…</p></div>
+
+  <script>
+    const explorer = (hash) => 'https://sepolia.etherscan.io/tx/' + hash;
+    const payoutRail = { credit_debit_card: 'MoonPay (Visa Direct)', sepa_bank_transfer: 'MoonPay (SEPA)' };
+
+    function el(tag, text, className) {
+      const node = document.createElement(tag);
+      if (text !== undefined) node.textContent = text;
+      if (className) node.className = className;
+      return node;
+    }
+
+    function link(hash) {
+      const a = el('a', hash.slice(0, 10) + '…');
+      a.href = explorer(hash);
+      a.target = '_blank';
+      return a;
+    }
+
+    // state: 'done' | 'failed' | 'pending'; detail: text and/or DOM nodes
+    function row(step, responsible, state, ...detail) {
+      const label = { done: ['Done', 'confirmed'], failed: ['Failed', 'failed'], pending: ['Pending', 'pending'] }[state];
+      const result = el('td');
+      result.append(el('span', label[0], 'status ' + label[1]), ...detail);
+      const tr = el('tr');
+      tr.append(el('td', step), el('td', responsible, 'muted'), result);
+      return tr;
+    }
+
+    function saleTable(s) {
+      const rows = [
+        row('Sale created', 'MoonPay', 'done',
+          `${s.baseAmount} ${s.baseCode.toUpperCase()} → ${s.quoteAmount} ${s.quoteCode.toUpperCase()} net (${s.fee} ${s.quoteCode.toUpperCase()} fee)`),
+      ];
+
+      const depositState = ['COMPLETE', 'CONFIRMED'].includes(s.deposit.state) ? 'done'
+        : ['FAILED', 'DENIED'].includes(s.deposit.state) ? 'failed' : 'pending';
+      const depositDetail = s.deposit.hash
+        ? [link(s.deposit.hash), ` · gas ${parseFloat(s.deposit.networkFee).toFixed(6)} ETH`]
+        : ['Not broadcast yet'];
+      rows.push(row('Crypto deposit', 'Us (via Circle)', depositState, ...depositDetail));
+
+      rows.push(s.depositReceived
+        ? row('Confirmations received', 'Blockchain', 'done', `${s.confirmations} confirmations`)
+        : row('Confirmations received', 'Blockchain', 'pending', 'Waiting for MoonPay to see the deposit'));
+
+      const payout = payoutRail[s.payoutMethod] || 'MoonPay';
+      if (s.status === 'completed') rows.push(row('Fiat payout', payout, 'done', 'Payout initiated'));
+      else if (s.status === 'failed') rows.push(row('Fiat payout', payout, 'failed', s.failureReason || 'Failed'));
+      else rows.push(row('Fiat payout', payout, 'pending', 'In progress'));
+
+      if (s.status === 'failed') {
+        if (s.refundHash) rows.push(row('Crypto refund', 'MoonPay', 'done', link(s.refundHash)));
+        else rows.push(row('Crypto refund', 'MoonPay', 'pending',
+          s.refundApprovalStatus === 'approved' ? 'Approved, not sent' : 'Not started'));
+      }
+
+      const table = el('table');
+      const head = el('tr');
+      head.append(el('th', 'Step'), el('th', 'Responsible'), el('th', 'Result'));
+      const thead = el('thead');
+      thead.append(head);
+      const tbody = el('tbody');
+      tbody.append(...rows);
+      table.append(thead, tbody);
+      return table;
+    }
+
+    async function load() {
+      const container = document.getElementById('sales');
+      const res = await fetch('/api/offramp');
+      const data = await res.json();
+      if (!res.ok) return container.replaceChildren(el('p', data.error, 'muted'));
+      if (!data.length) return container.replaceChildren(el('p', 'No off-ramp sale yet.', 'muted'));
+
+      container.replaceChildren(...data.flatMap((s) => {
+        const date = new Date(s.createdAt).toLocaleDateString('en', { timeZone: 'Europe/Paris', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+        return [el('h2', `Sale ${s.id.slice(0, 8)} · ${date}`), saleTable(s)];
+      }));
+    }
+
+    load();
+  </script>
+</body>
+</html>
